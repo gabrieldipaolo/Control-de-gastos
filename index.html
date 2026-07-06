@@ -223,7 +223,7 @@
   <div class="handle"></div>
   <h3 id="sub-sheet-title">Nueva suscripción</h3>
   <input type="hidden" id="s-id">
-  <label>Las más habituales — toca una para rellenar</label>
+  <label>Habituales — toca una para rellenar (o escribe la tuya abajo)</label>
   <div class="chip-list" id="sub-presets"></div>
   <label>Nombre</label>
   <input type="text" id="s-name" placeholder="Ej. Claude, Gym, Adeslas">
@@ -668,24 +668,35 @@ function openCatDetail(cid){
 
 /* ================= SUSCRIPCIONES ================= */
 const FREQ_LABEL = {1:'Mensual',2:'Bimestral',3:'Trimestral',6:'Semestral',12:'Anual'};
-const SUB_PRESETS = [
-  ['🎬','Netflix'],['🎧','Spotify'],['▶️','YouTube Premium'],['🎶','YouTube Music'],
-  ['🏰','Disney+'],['🎭','HBO Max'],['📦','Amazon Prime'],['🍎','Apple TV+'],
-  ['🎵','Apple Music'],['☁️','iCloud'],['🗄️','Google One'],['✳️','Claude'],
-  ['🤖','ChatGPT'],['🏋️','Gym'],['🏥','Seguro salud'],['📶','Internet'],
-  ['📱','Móvil'],['🎮','PlayStation Plus'],['🕹️','Xbox Game Pass'],['📁','Dropbox'],
-  ['🦉','Duolingo'],['🎨','Canva'],['📰','Prensa'],['🚗','Seguro coche']
+const SUB_GROUPS = [
+  ['Finanzas y hogar', [
+    ['🏠','Hipoteca'],['🏢','Alquiler'],['💳','Préstamo'],['🚗','Préstamo coche'],
+    ['🏘️','Comunidad'],['💡','Luz'],['💧','Agua'],['🔥','Gas'],
+    ['🚗','Seguro coche'],['🏥','Seguro salud'],['🏠','Seguro hogar'],['🪪','Cuota autónomo']
+  ]],
+  ['Streaming y música', [
+    ['🎬','Netflix'],['🎧','Spotify'],['▶️','YouTube Premium'],['🎶','YouTube Music'],
+    ['🏰','Disney+'],['🎭','HBO Max'],['📦','Amazon Prime'],['🍎','Apple TV+'],['🎵','Apple Music']
+  ]],
+  ['Servicios y apps', [
+    ['✳️','Claude'],['🤖','ChatGPT'],['☁️','iCloud'],['🗄️','Google One'],
+    ['📶','Internet'],['📱','Móvil'],['🏋️','Gym'],['🎮','PlayStation Plus'],
+    ['🕹️','Xbox Game Pass'],['📁','Dropbox'],['🦉','Duolingo'],['🎨','Canva'],['📰','Prensa']
+  ]]
 ];
 function renderPresets(){
-  document.getElementById('sub-presets').innerHTML = SUB_PRESETS.map(([ic,n],i)=>
-    `<button type="button" class="preset" id="preset-${i}" onclick="pickPreset(${i})">${ic} ${n}</button>`).join('');
+  document.getElementById('sub-presets').innerHTML = SUB_GROUPS.map(([g,items],gi)=>
+    `<div style="width:100%;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:${gi?'10px':'0'} 0 2px;">${g}</div>`
+    + items.map(([ic,n],i)=>
+      `<button type="button" class="preset" id="preset-${gi}-${i}" onclick="pickPreset(${gi},${i})">${ic} ${n}</button>`).join('')
+  ).join('');
 }
-function pickPreset(i){
-  const [ic,n] = SUB_PRESETS[i];
+function pickPreset(gi,i){
+  const [ic,n] = SUB_GROUPS[gi][1][i];
   document.getElementById('s-name').value = n;
   document.getElementById('s-icon').value = ic;
   document.querySelectorAll('.preset').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('preset-'+i).classList.add('sel');
+  document.getElementById('preset-'+gi+'-'+i).classList.add('sel');
 }
 function addMonths(dateStr, n){
   const [y,m,d] = dateStr.split('-').map(Number);
