@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mis Gastos">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#000000">
+<title>Mis Gastos</title>
+<style>
+  :root{
+    --bg:#000000; --card:#141416; --card2:#1d1d20; --pill:#2a2a2e;
+    --text:#ffffff; --muted:#8e8e93; --line:#26262a;
+    --blue:#3b82f6; --green:#30d158; --red:#ff453a; --amber:#ffd60a;
+    --radius:24px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+    height:100%;overscroll-behavior:none;}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom));}
+  .screen{display:none;padding:16px 20px 24px;max-width:560px;margin:0 auto;}
+  .screen.active{display:block;animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+  h1{font-size:34px;font-weight:800;letter-spacing:-.5px;margin:8px 0 18px;}
+  h2{font-size:22px;font-weight:700;letter-spacing:-.3px;margin:26px 0 12px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding-top:calc(env(safe-area-inset-top) + 6px);min-height:44px;}
+  .iconbtn{width:44px;height:44px;border-radius:50%;background:var(--card);border:none;color:var(--text);
+    font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:12px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .muted{color:var(--muted);}
+  .small{font-size:13px;}
+  .pill{background:var(--pill);border-radius:100px;padding:6px 14px;font-size:14px;color:#d5d5da;white-space:nowrap;}
+  .pill.blue{color:var(--blue);background:rgba(59,130,246,.15);}
+  .pill.green{color:var(--green);background:rgba(48,209,88,.15);}
+  .pill.red{color:var(--red);background:rgba(255,69,58,.15);}
+  .bar{height:8px;border-radius:100px;background:var(--pill);overflow:hidden;margin:12px 0 10px;}
+  .bar>div{height:100%;border-radius:100px;background:#e5e5ea;transition:width .4s ease;}
+  .bar>div.over{background:var(--red);}
+  .bar>div.ok{background:var(--green);}
+  .emoji{width:46px;height:46px;border-radius:50%;background:var(--pill);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .stat{background:var(--card);border-radius:var(--radius);padding:16px 18px;}
+  .stat .label{font-size:15px;color:var(--muted);margin-bottom:6px;display:flex;gap:6px;align-items:center;}
+  .stat .value{font-size:24px;font-weight:800;letter-spacing:-.5px;}
+  .tappable{cursor:pointer;transition:transform .08s ease;}
+  .tappable:active{transform:scale(.98);}
+  /* forms */
+  label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px;}
+  input,select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--text);
+    border-radius:14px;padding:14px;font-size:17px;outline:none;appearance:none;font-family:inherit;}
+  input:focus,select:focus{border-color:#4a4a52;}
+  .btn{width:100%;border:none;border-radius:16px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;margin-top:20px;font-family:inherit;}
+  .btn.primary{background:#fff;color:#000;}
+  .btn.danger{background:rgba(255,69,58,.15);color:var(--red);}
+  .btn.ghost{background:var(--pill);color:var(--text);}
+  /* tab bar */
+  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,18,20,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--line);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:50;}
+  nav button{flex:1;background:none;border:none;color:var(--muted);font-size:11px;font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;}
+  nav button .ic{font-size:22px;line-height:1;}
+  nav button.on{color:#fff;}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:90;display:none;}
+  .overlay.show{display:block;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;background:#161618;border-radius:28px 28px 0 0;
+    padding:20px 20px calc(28px + env(safe-area-inset-bottom));z-index:100;transform:translateY(105%);
+    transition:transform .25s ease;max-height:88vh;overflow-y:auto;max-width:560px;margin:0 auto;}
+  .sheet.show{transform:none;}
+  .sheet h3{font-size:20px;font-weight:800;margin-bottom:4px;}
+  .handle{width:40px;height:5px;border-radius:100px;background:#3a3a3e;margin:0 auto 16px;}
+  .exp-item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);}
+  .exp-item:last-child{border-bottom:none;}
+  .exp-item .info{flex:1;min-width:0;}
+  .exp-item .name{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .exp-item .amount{font-size:16px;font-weight:700;white-space:nowrap;}
+  .empty{text-align:center;color:var(--muted);padding:36px 20px;font-size:15px;line-height:1.5;}
+  .month-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:16px;}
+  .month-nav .label{font-size:16px;font-weight:700;min-width:150px;text-align:center;text-transform:capitalize;}
+  .month-nav button{background:var(--card);border:none;color:var(--text);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer;}
+  .chip-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .del{color:var(--red);background:none;border:none;font-size:20px;cursor:pointer;padding:6px;}
+  .fab{position:fixed;right:20px;bottom:calc(96px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;
+    background:#fff;color:#000;border:none;font-size:30px;font-weight:400;z-index:40;cursor:pointer;
+    box-shadow:0 6px 24px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;}
+</style>
+</head>
+<body>
+
+<!-- ============ INICIO ============ -->
+<div class="screen active" id="screen-inicio">
+  <div class="topbar"><div style="font-size:17px;font-weight:700;">Inicio</div>
+    <button class="iconbtn" onclick="openSheet('sheet-gasto')">+</button></div>
+  <h1>Resumen</h1>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <div class="label" id="month-label"></div>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="grid2">
+    <div class="stat"><div class="label">↗ Gastado</div><div class="value" id="st-gastado">0,00 €</div></div>
+    <div class="stat"><div class="label">↙ Disponible</div><div class="value" id="st-disponible">0,00 €</div></div>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <div class="row">
+      <div><div class="muted small">Ahorro este mes</div>
+        <div style="font-size:22px;font-weight:800;margin-top:4px;" id="st-ahorro">0,00 €</div></div>
+      <span class="pill" id="st-ahorro-pct">0%</span>
+    </div>
+    <div class="bar"><div id="bar-ahorro" style="width:0%"></div></div>
+    <div class="row small muted"><span>de <span id="st-presupuesto"></span> de presupuesto</span><span id="st-ahorro-obj"></span></div>
+  </div>
+  <h2>Desglose por Categoría</h2>
+  <div id="cat-breakdown"></div>
+</div>
+
+<!-- ============ GASTOS ============ -->
+<div class="screen" id="screen-gastos">
+  <div class="topbar"><div style="font-size:17px;font-weight:700;">Gastos</div>
+    <button class="iconbtn" onclick="openSheet('sheet-gasto')">+</button></div>
+  <h1>Movimientos</h1>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <div class="label" id="month-label-2"></div>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="card" id="exp-list"></div>
+</div>
+
+<!-- ============ HISTÓRICO ============ -->
+<div class="screen" id="screen-historico">
+  <div class="topbar"><div style="font-size:17px;font-weight:700;">Histórico</div><span></span></div>
+  <h1>Evolución</h1>
+  <div class="card">
+    <div class="muted small" style="margin-bottom:14px;">Gasto mensual (últimos 12 meses)</div>
+    <div id="hist-chart" style="display:flex;align-items:flex-end;gap:6px;height:140px;"></div>
+  </div>
+  <h2>Mes a mes</h2>
+  <div id="hist-list"></div>
+  <h2>Categorías: <span id="hist-cmp-label" style="text-transform:capitalize;"></span></h2>
+  <div class="card" id="hist-cats"></div>
+</div>
+
+<!-- ============ OBJETIVOS ============ -->
+<div class="screen" id="screen-objetivos">
+  <div class="topbar"><div style="font-size:17px;font-weight:700;">Objetivos</div><span></span></div>
+  <h1>Objetivos</h1>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <div class="label" id="month-label-3"></div>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+  <div id="goal-ahorro"></div>
+  <h2>Gasto por categoría</h2>
+  <div id="goal-list"></div>
+</div>
+
+<!-- ============ AJUSTES ============ -->
+<div class="screen" id="screen-ajustes">
+  <div class="topbar"><div style="font-size:17px;font-weight:700;">Ajustes</div><span></span></div>
+  <h1>Configuración</h1>
+
+  <div class="card">
+    <label style="margin-top:0;">Presupuesto mensual total (€)</label>
+    <input type="number" inputmode="decimal" id="in-budget" placeholder="2100">
+    <label>Objetivo de ahorro mensual (€) — opcional</label>
+    <input type="number" inputmode="decimal" id="in-savings-goal" placeholder="Se calcula como presupuesto − objetivos de gasto">
+    <button class="btn primary" onclick="saveBudget()">Guardar presupuesto</button>
+  </div>
+
+  <h2>Categorías</h2>
+  <div class="card" id="cat-list"></div>
+  <button class="btn ghost" onclick="openSheet('sheet-cat')">+ Nueva categoría</button>
+
+  <h2>Sitios</h2>
+  <div class="card" id="place-list"></div>
+  <button class="btn ghost" onclick="openSheet('sheet-place')">+ Nuevo sitio</button>
+
+  <h2>Datos</h2>
+  <button class="btn ghost" onclick="exportData()">Exportar copia de seguridad</button>
+  <button class="btn ghost" onclick="importData()">Importar copia de seguridad</button>
+  <button class="btn danger" onclick="wipeData()">Borrar todos los datos</button>
+</div>
+
+<!-- ============ DETALLE CATEGORÍA (sheet) ============ -->
+<div class="overlay" id="overlay" onclick="closeSheets()"></div>
+
+<div class="sheet" id="sheet-detail">
+  <div class="handle"></div>
+  <div id="detail-content"></div>
+</div>
+
+<!-- ============ NUEVO GASTO ============ -->
+<div class="sheet" id="sheet-gasto">
+  <div class="handle"></div>
+  <h3>Nuevo gasto</h3>
+  <label>Importe (€)</label>
+  <input type="number" inputmode="decimal" id="g-amount" placeholder="0,00">
+  <label>Sitio</label>
+  <select id="g-place"></select>
+  <label>Fecha</label>
+  <input type="date" id="g-date">
+  <label>Nota (opcional)</label>
+  <input type="text" id="g-note" placeholder="Ej. cena con Paz">
+  <button class="btn primary" onclick="addExpense()">Añadir gasto</button>
+</div>
+
+<!-- ============ NUEVA CATEGORÍA ============ -->
+<div class="sheet" id="sheet-cat">
+  <div class="handle"></div>
+  <h3 id="cat-sheet-title">Nueva categoría</h3>
+  <input type="hidden" id="c-id">
+  <label>Nombre</label>
+  <input type="text" id="c-name" placeholder="Ej. Supermercados">
+  <label>Emoji</label>
+  <input type="text" id="c-emoji" placeholder="🛒" maxlength="4">
+  <label>Objetivo de gasto mensual (€)</label>
+  <input type="number" inputmode="decimal" id="c-goal" placeholder="450">
+  <button class="btn primary" onclick="saveCategory()">Guardar</button>
+</div>
+
+<!-- ============ NUEVO SITIO ============ -->
+<div class="sheet" id="sheet-place">
+  <div class="handle"></div>
+  <h3 id="place-sheet-title">Nuevo sitio</h3>
+  <input type="hidden" id="p-id">
+  <label>Nombre</label>
+  <input type="text" id="p-name" placeholder="Ej. Mercadona">
+  <label>Categoría</label>
+  <select id="p-cat"></select>
+  <button class="btn primary" onclick="savePlace()">Guardar</button>
+</div>
+
+<button class="fab" onclick="openSheet('sheet-gasto')">＋</button>
+
+<nav>
+  <button id="tab-inicio" class="on" onclick="go('inicio')"><span class="ic">▦</span>Inicio</button>
+  <button id="tab-gastos" onclick="go('gastos')"><span class="ic">€</span>Gastos</button>
+  <button id="tab-historico" onclick="go('historico')"><span class="ic">↗</span>Histórico</button>
+  <button id="tab-objetivos" onclick="go('objetivos')"><span class="ic">⚑</span>Objetivos</button>
+  <button id="tab-ajustes" onclick="go('ajustes')"><span class="ic">⚙</span>Ajustes</button>
+</nav>
+
+<script>
+/* ================= ESTADO ================= */
+const KEY = 'misGastosApp_v1';
+let state = load();
+let currentMonth = ym(new Date());          // 'YYYY-MM' que se está viendo
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {
+    budget: 2100,
+    savingsGoal: null,     // si es null, se calcula automáticamente
+    categories: [
+      {id:id(), name:'Supermercados', emoji:'🛒', goal:450},
+      {id:id(), name:'Bares y discos', emoji:'🍻', goal:200},
+      {id:id(), name:'Productividad', emoji:'💼', goal:50},
+      {id:id(), name:'IA', emoji:'✳️', goal:25}
+    ],
+    places: [],
+    expenses: []
+  };
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function id(){ return Math.random().toString(36).slice(2,10); }
+function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function today(){ const d=new Date(); return ym(d)+'-'+String(d.getDate()).padStart(2,'0'); }
+function eur(n){ return n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €'; }
+function catById(cid){ return state.categories.find(c=>c.id===cid); }
+function placeById(pid){ return state.places.find(p=>p.id===pid); }
+
+/* ================= NAVEGACIÓN ================= */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  render();
+  window.scrollTo(0,0);
+}
+function changeMonth(delta){
+  const [y,m] = currentMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  currentMonth = ym(d);
+  render();
+}
+function monthLabel(){
+  const [y,m] = currentMonth.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+}
+
+/* ================= SHEETS ================= */
+function openSheet(sid){
+  closeSheets();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById(sid).classList.add('show');
+  if(sid==='sheet-gasto'){
+    fillPlaceSelect();
+    document.getElementById('g-date').value = today();
+    document.getElementById('g-amount').value='';
+    document.getElementById('g-note').value='';
+  }
+  if(sid==='sheet-cat' && !document.getElementById('c-id').value){
+    document.getElementById('cat-sheet-title').textContent='Nueva categoría';
+    document.getElementById('c-name').value=''; document.getElementById('c-emoji').value='';
+    document.getElementById('c-goal').value='';
+  }
+  if(sid==='sheet-place' && !document.getElementById('p-id').value){
+    document.getElementById('place-sheet-title').textContent='Nuevo sitio';
+    document.getElementById('p-name').value='';
+    fillCatSelect();
+  }
+}
+function closeSheets(){
+  document.getElementById('overlay').classList.remove('show');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('show'));
+  document.getElementById('c-id').value='';
+  document.getElementById('p-id').value='';
+}
+
+/* ================= CRUD ================= */
+function saveBudget(){
+  const b = parseFloat(document.getElementById('in-budget').value);
+  if(!isNaN(b) && b>0) state.budget = b;
+  const sg = document.getElementById('in-savings-goal').value;
+  state.savingsGoal = sg==='' ? null : parseFloat(sg);
+  save(); render();
+  alert('Presupuesto guardado ✓');
+}
+function saveCategory(){
+  const name = document.getElementById('c-name').value.trim();
+  if(!name){ alert('Ponle un nombre a la categoría'); return; }
+  const emoji = document.getElementById('c-emoji').value.trim() || '📁';
+  const goal = parseFloat(document.getElementById('c-goal').value) || 0;
+  const cid = document.getElementById('c-id').value;
+  if(cid){
+    const c = catById(cid); c.name=name; c.emoji=emoji; c.goal=goal;
+  } else {
+    state.categories.push({id:id(), name, emoji, goal});
+  }
+  save(); closeSheets(); render();
+}
+function editCategory(cid){
+  const c = catById(cid);
+  document.getElementById('c-id').value = c.id;
+  document.getElementById('c-name').value = c.name;
+  document.getElementById('c-emoji').value = c.emoji;
+  document.getElementById('c-goal').value = c.goal || '';
+  document.getElementById('cat-sheet-title').textContent = 'Editar categoría';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('sheet-cat').classList.add('show');
+}
+function deleteCategory(cid){
+  const used = state.places.some(p=>p.catId===cid);
+  if(used){ alert('Esta categoría tiene sitios asociados. Borra o reasigna esos sitios primero.'); return; }
+  if(!confirm('¿Borrar esta categoría?')) return;
+  state.categories = state.categories.filter(c=>c.id!==cid);
+  save(); render();
+}
+function savePlace(){
+  const name = document.getElementById('p-name').value.trim();
+  const catId = document.getElementById('p-cat').value;
+  if(!name){ alert('Ponle un nombre al sitio'); return; }
+  if(!catId){ alert('Crea primero una categoría'); return; }
+  const pid = document.getElementById('p-id').value;
+  if(pid){
+    const p = placeById(pid); p.name=name; p.catId=catId;
+  } else {
+    state.places.push({id:id(), name, catId});
+  }
+  save(); closeSheets(); render();
+}
+function editPlace(pid){
+  const p = placeById(pid);
+  document.getElementById('p-id').value = p.id;
+  document.getElementById('p-name').value = p.name;
+  fillCatSelect(p.catId);
+  document.getElementById('place-sheet-title').textContent = 'Editar sitio';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('sheet-place').classList.add('show');
+}
+function deletePlace(pid){
+  const used = state.expenses.some(e=>e.placeId===pid);
+  if(used && !confirm('Este sitio tiene gastos asociados que también se borrarán. ¿Continuar?')) return;
+  if(!used && !confirm('¿Borrar este sitio?')) return;
+  state.places = state.places.filter(p=>p.id!==pid);
+  state.expenses = state.expenses.filter(e=>e.placeId!==pid);
+  save(); render();
+}
+function addExpense(){
+  const amount = parseFloat(document.getElementById('g-amount').value);
+  const placeId = document.getElementById('g-place').value;
+  const date = document.getElementById('g-date').value;
+  const note = document.getElementById('g-note').value.trim();
+  if(isNaN(amount) || amount<=0){ alert('Introduce un importe válido'); return; }
+  if(!placeId){ alert('Crea primero un sitio en Ajustes'); return; }
+  if(!date){ alert('Selecciona una fecha'); return; }
+  state.expenses.push({id:id(), amount, placeId, date, note});
+  save(); closeSheets();
+  currentMonth = date.slice(0,7);
+  render();
+}
+function deleteExpense(eid){
+  if(!confirm('¿Borrar este gasto?')) return;
+  state.expenses = state.expenses.filter(e=>e.id!==eid);
+  save(); render();
+  closeSheets();
+}
+
+/* ================= SELECTS ================= */
+function fillPlaceSelect(){
+  const sel = document.getElementById('g-place');
+  sel.innerHTML = state.places.length
+    ? state.places.map(p=>{
+        const c = catById(p.catId);
+        return `<option value="${p.id}">${c?c.emoji+' ':''}${p.name}</option>`;
+      }).join('')
+    : '<option value="">— Crea un sitio en Ajustes —</option>';
+}
+function fillCatSelect(selected){
+  const sel = document.getElementById('p-cat');
+  sel.innerHTML = state.categories.map(c=>
+    `<option value="${c.id}" ${c.id===selected?'selected':''}>${c.emoji} ${c.name}</option>`).join('');
+}
+
+/* ================= CÁLCULOS ================= */
+function monthExpenses(){
+  return state.expenses.filter(e=>e.date.slice(0,7)===currentMonth);
+}
+function totalsByCategory(){
+  const map = {};
+  monthExpenses().forEach(e=>{
+    const p = placeById(e.placeId);
+    if(!p) return;
+    map[p.catId] = (map[p.catId]||0) + e.amount;
+  });
+  return map;
+}
+function totalsByPlace(catId){
+  const map = {};
+  monthExpenses().forEach(e=>{
+    const p = placeById(e.placeId);
+    if(!p || p.catId!==catId) return;
+    map[p.id] = (map[p.id]||0) + e.amount;
+  });
+  return map;
+}
+function savingsTarget(){
+  if(state.savingsGoal!=null && !isNaN(state.savingsGoal)) return state.savingsGoal;
+  const goals = state.categories.reduce((s,c)=>s+(c.goal||0),0);
+  return Math.max(state.budget - goals, 0);
+}
+
+/* ================= RENDER ================= */
+function render(){
+  document.querySelectorAll('#month-label,#month-label-2,#month-label-3').forEach(el=>el.textContent = monthLabel());
+  const spent = monthExpenses().reduce((s,e)=>s+e.amount,0);
+  const available = state.budget - spent;
+  const saving = Math.max(available,0);
+  const sTarget = savingsTarget();
+
+  /* --- Inicio --- */
+  document.getElementById('st-gastado').textContent = eur(spent);
+  const dispEl = document.getElementById('st-disponible');
+  dispEl.textContent = eur(available);
+  dispEl.style.color = available<0 ? 'var(--red)' : '';
+  document.getElementById('st-ahorro').textContent = eur(saving);
+  document.getElementById('st-presupuesto').textContent = eur(state.budget);
+  document.getElementById('st-ahorro-obj').textContent = 'objetivo: '+eur(sTarget);
+  const sPct = sTarget>0 ? Math.round(saving/sTarget*100) : 0;
+  document.getElementById('st-ahorro-pct').textContent = sPct+'%';
+  const barA = document.getElementById('bar-ahorro');
+  barA.style.width = Math.min(sPct,100)+'%';
+  barA.className = sPct>=100 ? 'ok' : '';
+
+  const byCat = totalsByCategory();
+  const cats = [...state.categories].sort((a,b)=>(byCat[b.id]||0)-(byCat[a.id]||0));
+  const bd = document.getElementById('cat-breakdown');
+  if(spent===0){
+    bd.innerHTML = '<div class="card empty">Todavía no hay gastos este mes.<br>Pulsa ＋ para añadir el primero.</div>';
+  } else {
+    bd.innerHTML = '<div class="card" style="padding:6px 18px;">' + cats.map(c=>{
+      const v = byCat[c.id]||0;
+      if(v===0) return '';
+      const pct = Math.round(v/spent*100);
+      const goalPct = c.goal>0 ? Math.min(v/c.goal*100,100) : 0;
+      const over = c.goal>0 && v>c.goal;
+      return `<div class="tappable" style="padding:14px 0;border-bottom:1px solid var(--line);" onclick="openCatDetail('${c.id}')">
+        <div class="row"><div class="row" style="gap:10px;"><span style="font-size:20px;">${c.emoji}</span>
+          <span style="font-weight:700;font-size:17px;">${c.name}</span></div>
+          <span style="font-weight:800;font-size:17px;">${pct}%</span></div>
+        <div class="bar" style="margin:10px 0 8px;"><div class="${over?'over':''}" style="width:${goalPct||Math.min(pct,100)}%"></div></div>
+        <div class="row small muted"><span>${eur(v)}</span><span>${c.goal>0?'de '+eur(c.goal):'sin objetivo'}</span></div>
+      </div>`;
+    }).join('').replace(/border-bottom:1px solid var\(--line\);(?![\s\S]*border-bottom)/,'') + '</div>';
+  }
+
+  /* --- Gastos --- */
+  const list = document.getElementById('exp-list');
+  const exps = monthExpenses().sort((a,b)=>b.date.localeCompare(a.date));
+  list.innerHTML = exps.length ? exps.map(e=>{
+    const p = placeById(e.placeId); const c = p?catById(p.catId):null;
+    const d = new Date(e.date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+    return `<div class="exp-item">
+      <div class="emoji" style="width:40px;height:40px;font-size:18px;">${c?c.emoji:'❓'}</div>
+      <div class="info"><div class="name">${p?p.name:'Sitio borrado'}</div>
+        <div class="small muted">${d}${e.note?' · '+e.note:''}</div></div>
+      <div class="amount">−${eur(e.amount)}</div>
+      <button class="del" onclick="deleteExpense('${e.id}')">×</button>
+    </div>`;
+  }).join('') : '<div class="empty">Sin movimientos este mes.</div>';
+
+  /* --- Objetivos --- */
+  const ga = document.getElementById('goal-ahorro');
+  ga.innerHTML = `<div class="card">
+    <div class="row"><div class="row" style="gap:12px;"><div class="emoji">🏦</div>
+      <span style="font-size:19px;font-weight:700;">Ahorro</span></div>
+      <span class="pill ${saving>=sTarget&&sTarget>0?'green':(saving>0?'blue':'')}">${sTarget===0?'Sin objetivo':(saving>=sTarget?'Conseguido':(saving>0?'En marcha':'Sin empezar'))}</span></div>
+    <div class="bar"><div class="${saving>=sTarget&&sTarget>0?'ok':''}" style="width:${sTarget>0?Math.min(saving/sTarget*100,100):0}%"></div></div>
+    <div class="row"><span class="muted">${eur(saving)} de ${eur(sTarget)}</span>
+      <span style="font-weight:800;font-size:18px;">${sTarget>0?Math.round(saving/sTarget*100):0}%</span></div>
+  </div>`;
+
+  const gl = document.getElementById('goal-list');
+  const withGoal = state.categories.filter(c=>c.goal>0);
+  gl.innerHTML = withGoal.length ? withGoal.map(c=>{
+    const v = byCat[c.id]||0;
+    const pct = Math.round(v/c.goal*100);
+    const status = v===0 ? '<span class="pill">Sin empezar</span>'
+      : v>c.goal ? '<span class="pill red">Superado</span>'
+      : '<span class="pill blue">En marcha</span>';
+    return `<div class="card tappable" onclick="openCatDetail('${c.id}')">
+      <div class="row"><div class="row" style="gap:12px;"><div class="emoji">${c.emoji}</div>
+        <span style="font-size:19px;font-weight:700;">${c.name}</span></div>${status}</div>
+      <div class="bar"><div class="${v>c.goal?'over':''}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="row"><span class="muted">${eur(v)} de ${eur(c.goal)}</span>
+        <span style="font-weight:800;font-size:18px;">${pct}%</span></div>
+    </div>`;
+  }).join('') : '<div class="card empty">Ninguna categoría tiene objetivo de gasto.<br>Configúralos en Ajustes.</div>';
+
+  /* --- Ajustes --- */
+  document.getElementById('in-budget').value = state.budget;
+  document.getElementById('in-savings-goal').value = state.savingsGoal ?? '';
+  document.getElementById('cat-list').innerHTML = state.categories.length ? state.categories.map(c=>
+    `<div class="exp-item"><div class="emoji" style="width:40px;height:40px;font-size:18px;">${c.emoji}</div>
+      <div class="info tappable" onclick="editCategory('${c.id}')"><div class="name">${c.name}</div>
+        <div class="small muted">${c.goal>0?'Objetivo: '+eur(c.goal):'Sin objetivo'}</div></div>
+      <button class="del" onclick="deleteCategory('${c.id}')">×</button></div>`
+  ).join('') : '<div class="empty">Sin categorías.</div>';
+  document.getElementById('place-list').innerHTML = state.places.length ? state.places.map(p=>{
+    const c = catById(p.catId);
+    return `<div class="exp-item"><div class="emoji" style="width:40px;height:40px;font-size:18px;">${c?c.emoji:'❓'}</div>
+      <div class="info tappable" onclick="editPlace('${p.id}')"><div class="name">${p.name}</div>
+        <div class="small muted">${c?c.name:'Categoría borrada'}</div></div>
+      <button class="del" onclick="deletePlace('${p.id}')">×</button></div>`;
+  }).join('') : '<div class="empty">Sin sitios. Crea el primero para poder registrar gastos.</div>';
+
+  renderHistorico();
+}
+
+/* ================= DETALLE CATEGORÍA ================= */
+function openCatDetail(cid){
+  const c = catById(cid);
+  const byPlace = totalsByPlace(cid);
+  const total = Object.values(byPlace).reduce((s,v)=>s+v,0);
+  const places = state.places.filter(p=>p.catId===cid && byPlace[p.id])
+    .sort((a,b)=>byPlace[b.id]-byPlace[a.id]);
+  const exps = monthExpenses().filter(e=>{
+    const p = placeById(e.placeId); return p && p.catId===cid;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  let html = `<div class="row" style="margin-bottom:16px;">
+    <div class="row" style="gap:12px;"><div class="emoji">${c.emoji}</div>
+      <div><h3>${c.name}</h3><div class="small muted">${eur(total)} este mes${c.goal>0?' · objetivo '+eur(c.goal):''}</div></div></div>
+  </div>`;
+
+  if(places.length){
+    html += '<div class="small muted" style="margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Por sitio</div><div class="card" style="background:var(--card2);padding:6px 16px;">';
+    html += places.map(p=>{
+      const v = byPlace[p.id]; const pct = Math.round(v/total*100);
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--line);">
+        <div class="row"><span style="font-weight:600;">${p.name}</span><span style="font-weight:700;">${pct}%</span></div>
+        <div class="bar" style="margin:8px 0 6px;"><div style="width:${pct}%"></div></div>
+        <div class="small muted">${eur(v)}</div></div>`;
+    }).join('');
+    html += '</div>';
+    html += '<div class="small muted" style="margin:16px 0 8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Movimientos</div><div class="card" style="background:var(--card2);padding:6px 16px;">';
+    html += exps.map(e=>{
+      const p = placeById(e.placeId);
+      const d = new Date(e.date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'short'});
+      return `<div class="exp-item"><div class="info"><div class="name">${p.name}</div>
+        <div class="small muted">${d}${e.note?' · '+e.note:''}</div></div>
+        <div class="amount">−${eur(e.amount)}</div>
+        <button class="del" onclick="deleteExpense('${e.id}')">×</button></div>`;
+    }).join('');
+    html += '</div>';
+  } else {
+    html += '<div class="empty">Sin gastos en esta categoría este mes.</div>';
+  }
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('sheet-detail').classList.add('show');
+}
+
+/* ================= HISTÓRICO ================= */
+function totalOfMonth(month){
+  return state.expenses.filter(e=>e.date.slice(0,7)===month).reduce((s,e)=>s+e.amount,0);
+}
+function catTotalsOfMonth(month){
+  const map = {};
+  state.expenses.filter(e=>e.date.slice(0,7)===month).forEach(e=>{
+    const p = placeById(e.placeId); if(!p) return;
+    map[p.catId] = (map[p.catId]||0) + e.amount;
+  });
+  return map;
+}
+function prevMonth(month){
+  const [y,m] = month.split('-').map(Number);
+  return ym(new Date(y, m-2, 1));
+}
+function labelOf(month){
+  const [y,m] = month.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('es-ES',{month:'short',year:'2-digit'});
+}
+function renderHistorico(){
+  // últimos 12 meses acabando en el mes que se está viendo
+  const months = [];
+  let mm = currentMonth;
+  for(let i=0;i<12;i++){ months.unshift(mm); mm = prevMonth(mm); }
+  const totals = months.map(m=>totalOfMonth(m));
+  const max = Math.max(...totals, 1);
+
+  // gráfico de barras
+  document.getElementById('hist-chart').innerHTML = months.map((m,i)=>{
+    const h = Math.round(totals[i]/max*100);
+    const isCur = m===currentMonth;
+    return `<div class="tappable" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;"
+      onclick="currentMonth='${m}';render();">
+      <div style="width:100%;max-width:26px;border-radius:6px 6px 3px 3px;height:${Math.max(h,2)}%;
+        background:${isCur?'#fff':'var(--pill)'};"></div>
+      <div class="small" style="font-size:10px;color:${isCur?'#fff':'var(--muted)'};text-transform:capitalize;white-space:nowrap;">${labelOf(m).split(' ')[0]}</div>
+    </div>`;
+  }).join('');
+
+  // lista mes a mes (solo meses con datos, más recientes primero)
+  const withData = months.filter((m,i)=>totals[i]>0).reverse();
+  document.getElementById('hist-list').innerHTML = withData.length ? '<div class="card" style="padding:6px 18px;">' +
+    withData.map(m=>{
+      const t = totalOfMonth(m);
+      const pv = totalOfMonth(prevMonth(m));
+      const saving = Math.max(state.budget - t, 0);
+      let delta = '';
+      if(pv>0){
+        const d = Math.round((t-pv)/pv*100);
+        delta = d===0 ? '<span class="pill">= igual</span>'
+          : d>0 ? `<span class="pill red">▲ ${d}%</span>`
+          : `<span class="pill green">▼ ${Math.abs(d)}%</span>`;
+      }
+      return `<div class="tappable" style="padding:14px 0;border-bottom:1px solid var(--line);" onclick="currentMonth='${m}';go('inicio');">
+        <div class="row"><span style="font-weight:700;text-transform:capitalize;">${new Date(m+'-01T12:00:00').toLocaleDateString('es-ES',{month:'long',year:'numeric'})}</span>${delta}</div>
+        <div class="row small muted" style="margin-top:6px;"><span>Gastado: ${eur(t)}</span><span>Ahorro: ${eur(saving)}</span></div>
+      </div>`;
+    }).join('') + '</div>'
+    : '<div class="card empty">Aún no hay historial. A partir del segundo mes con gastos verás aquí la comparativa.</div>';
+
+  // comparativa por categoría: mes visto vs anterior
+  const cur = catTotalsOfMonth(currentMonth);
+  const prev = catTotalsOfMonth(prevMonth(currentMonth));
+  document.getElementById('hist-cmp-label').textContent = monthLabel() + ' vs mes anterior';
+  const ids = [...new Set([...Object.keys(cur), ...Object.keys(prev)])]
+    .sort((a,b)=>(cur[b]||0)-(cur[a]||0));
+  document.getElementById('hist-cats').innerHTML = ids.length ? ids.map(cid=>{
+    const c = catById(cid); if(!c) return '';
+    const a = cur[cid]||0, b = prev[cid]||0;
+    let delta = '<span class="pill">nuevo</span>';
+    if(b>0){
+      const d = Math.round((a-b)/b*100);
+      delta = d===0 ? '<span class="pill">=</span>'
+        : d>0 ? `<span class="pill red">▲ ${d}%</span>`
+        : `<span class="pill green">▼ ${Math.abs(d)}%</span>`;
+    }
+    return `<div class="exp-item"><div class="emoji" style="width:40px;height:40px;font-size:18px;">${c.emoji}</div>
+      <div class="info"><div class="name">${c.name}</div>
+        <div class="small muted">Antes: ${eur(b)}</div></div>
+      <div style="text-align:right;"><div class="amount">${eur(a)}</div><div style="margin-top:4px;">${delta}</div></div>
+    </div>`;
+  }).join('') : '<div class="empty">Sin datos para comparar todavía.</div>';
+}
+
+/* ================= DATOS ================= */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mis-gastos-backup.json';
+  a.click();
+}
+function importData(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const d = JSON.parse(r.result);
+        if(!d.categories || !d.expenses) throw 0;
+        state = d; save(); render();
+        alert('Copia restaurada ✓');
+      }catch(e){ alert('El archivo no es una copia válida.'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+function wipeData(){
+  if(!confirm('Se borrarán TODOS los datos: categorías, sitios y gastos. ¿Seguro?')) return;
+  localStorage.removeItem(KEY);
+  state = load();
+  save(); render();
+}
+
+render();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>
