@@ -1,4 +1,4 @@
-const CACHE = 'mis-gastos-v1';
+const CACHE = 'mis-gastos-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -10,10 +10,10 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim())
   );
 });
-// red primero (para recibir actualizaciones), caché si no hay conexión
+// red primero, ignorando la caché HTTP del propio navegador para no servir nunca una versión vieja
 self.addEventListener('fetch', e => {
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request, { cache: 'no-store' }).then(r => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
